@@ -146,8 +146,8 @@ export const CubeCanvas: React.FC<CubeCanvasProps> = ({
     const container = containerRef.current;
     if (!container) return;
 
-    const width = container.clientWidth;
-    const height = container.clientHeight;
+    const width = container.clientWidth || 600;
+    const height = container.clientHeight || 520;
 
     const scene = new THREE.Scene();
     threeSceneRef.current = scene;
@@ -202,18 +202,24 @@ export const CubeCanvas: React.FC<CubeCanvasProps> = ({
     animate();
 
     // Resize observer
-    const handleResize = () => {
+    const updateSize = () => {
       if (!container || !camera || !glRenderer) return;
-      const w = container.clientWidth;
-      const h = container.clientHeight;
-      camera.aspect = w / h;
-      camera.updateProjectionMatrix();
-      glRenderer.setSize(w, h);
+      const w = container.clientWidth || 600;
+      const h = container.clientHeight || 520;
+      if (w > 0 && h > 0) {
+        camera.aspect = w / h;
+        camera.updateProjectionMatrix();
+        glRenderer.setSize(w, h);
+      }
     };
-    window.addEventListener('resize', handleResize);
+
+    const resizeObserver = new ResizeObserver(updateSize);
+    resizeObserver.observe(container);
+    window.addEventListener('resize', updateSize);
 
     return () => {
-      window.removeEventListener('resize', handleResize);
+      resizeObserver.disconnect();
+      window.removeEventListener('resize', updateSize);
       cancelAnimationFrame(animationFrameId);
       cubeRenderer.dispose();
       glRenderer.dispose();
@@ -373,7 +379,7 @@ export const CubeCanvas: React.FC<CubeCanvasProps> = ({
   };
 
   return (
-    <div className="relative w-full h-full select-none overflow-hidden rounded-2xl bg-gradient-to-b from-[#0e1320] via-[#090d16] to-[#06080e] border border-slate-800/80 shadow-2xl">
+    <div className="relative w-full h-[400px] sm:h-[480px] lg:h-[580px] min-h-[380px] select-none overflow-hidden rounded-2xl bg-gradient-to-b from-[#0e1320] via-[#090d16] to-[#06080e] border border-slate-800/80 shadow-2xl">
       {/* 3D WebGL Canvas Viewport */}
       <div
         ref={containerRef}

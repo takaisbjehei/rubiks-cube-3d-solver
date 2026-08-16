@@ -403,7 +403,10 @@ export class CubeRenderer {
 
   public resetVisualTransforms() {
     this.cubies.forEach(cubie => {
-      const { initialX, initialY, initialZ } = cubie.userData;
+      if (cubie.parent !== this.cubeGroup) {
+        this.cubeGroup.add(cubie);
+      }
+      const { initialX, initialY, initialZ } = cubie.userData || { initialX: 0, initialY: 0, initialZ: 0 };
       cubie.position.set(initialX, initialY, initialZ);
       cubie.rotation.set(0, 0, 0);
       cubie.quaternion.identity();
