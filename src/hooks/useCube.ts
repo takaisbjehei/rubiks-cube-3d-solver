@@ -38,11 +38,18 @@ export function useCube() {
   const [soundEnabled, setSoundEnabled] = useState<boolean>(true);
   const [soundVolume, setSoundVolume] = useState<number>(0.4);
 
-  // Move trigger ref to communicate with 3D canvas
+  // Refs to avoid race conditions during async loops
   const triggerMoveRef = useRef<((move: NotationMove, speed?: number) => Promise<void>) | null>(null);
-  const playIntervalRef = useRef<number | null>(null);
+  const isAutoPlayingRef = useRef<boolean>(false);
+  const currentStepIndexRef = useRef<number>(0);
+  const solutionStepsRef = useRef<SolutionStep[]>([]);
+  const animationSpeedRef = useRef<number>(1.0);
 
-  // Live validation
+  currentStepIndexRef.current = currentStepIndex;
+  solutionStepsRef.current = solutionSteps;
+  animationSpeedRef.current = animationSpeed;
+
+  // Live validation & solve state
   const validation: ValidationDetail = validateCubeState(facelets);
   const isSolved = isCubeSolved(facelets);
 
@@ -61,8 +68,8 @@ export function useCube() {
       if (isCubeSolved(next)) {
         soundEffects.playSolvedFanfare();
         confetti({
-          particleCount: 80,
-          spread: 70,
+          particleCount: 100,
+          spread: 80,
           origin: { y: 0.6 },
           colors: ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#ffffff'],
         });
@@ -105,7 +112,10 @@ export function useCube() {
   }, [redoStack, animationSpeed]);
 
   // Scramble
-  const scramble = useCallback(async (length = 20) => {
+  const scramble = useCallback((length = 20) => {
+    isAutoPlayingRef.current = false;
+    setIsPlayingSolution(false);
+
     const scrambleMoves = generateScrambleMoves(length);
     let current = [...SOLVED_FACELETS];
 
@@ -118,7 +128,6 @@ export function useCube() {
     setRedoStack([]);
     setSolutionSteps([]);
     setCurrentStepIndex(0);
-    setIsPlayingSolution(false);
     setActiveFaceHighlight(null);
     setActiveMoveArrow(null);
     soundEffects.playTurn(false, false);
@@ -126,12 +135,14 @@ export function useCube() {
 
   // Reset to Solved
   const resetCube = useCallback(() => {
+    isAutoPlayingRef.current = false;
+    setIsPlayingSolution(false);
+
     setFacelets([...SOLVED_FACELETS]);
     setHistory([]);
     setRedoStack([]);
     setSolutionSteps([]);
     setCurrentStepIndex(0);
-    setIsPlayingSolution(false);
     setActiveFaceHighlight(null);
     setActiveMoveArrow(null);
     setSolverError(null);
@@ -172,14 +183,19 @@ export function useCube() {
 
   // Calculate Solution from current state
   const solveCurrentCube = useCallback((): SolverResult => {
+    isAutoPlayingRef.current = false;
+    setIsPlayingSolution(false);
     setIsSolving(true);
     setSolverError(null);
+
     const res = solveRubiksCube(facelets);
     setIsSolving(false);
 
     if (res.success && res.steps.length > 0) {
       setSolutionSteps(res.steps);
       setCurrentStepIndex(0);
+      currentStepIndexRef.current = 0;
+      solutionStepsRef.current = res.steps;
       setSolutionInitialFacelets([...facelets]);
       setActiveMoveArrow(res.steps[0].move);
       setActiveFaceHighlight(res.steps[0].face as Face);
@@ -194,11 +210,21 @@ export function useCube() {
   const stepForward = useCallback(async () => {
     if (solutionSteps.length === 0 || currentStepIndex >= solutionSteps.length) return;
     const step = solutionSteps[currentStepIndex];
-
-    await executeMove(step.move, false);
-
     const nextIndex = currentStepIndex + 1;
+
+    currentStepIndexRef.current = nextIndex;
     setCurrentStepIndex(nextIndex);
+
+    // 1. Animate visually
+    if (triggerMoveRef.current) {
+      await triggerMoveRef.current(step.move, animationSpeed);
+    } else {
+      soundEffects.playTurn(step.move.includes('2'), step.move.includes('\''));
+    }
+
+    // 2. Update logical facelets
+    const nextState = applyMoveToFacelets(facelets, step.move);
+    setFacelets(nextState);
 
     if (nextIndex < solutionSteps.length) {
       const nextStep = solutionSteps[nextIndex];
@@ -208,8 +234,18 @@ export function useCube() {
       setActiveMoveArrow(null);
       setActiveFaceHighlight(null);
       setIsPlayingSolution(false);
+      isAutoPlayingRef.current = false;
+      if (isCubeSolved(nextState)) {
+        soundEffects.playSolvedFanfare();
+        confetti({
+          particleCount: 100,
+          spread: 80,
+          origin: { y: 0.6 },
+          colors: ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#ffffff'],
+        });
+      }
     }
-  }, [solutionSteps, currentStepIndex, executeMove]);
+  }, [solutionSteps, currentStepIndex, facelets, animationSpeed]);
 
   // Step Backward in Solution
   const stepBackward = useCallback(async () => {
@@ -218,20 +254,29 @@ export function useCube() {
     const step = solutionSteps[prevIndex];
     const inv = invertMove(step.move);
 
+    currentStepIndexRef.current = prevIndex;
+    setCurrentStepIndex(prevIndex);
+
     if (triggerMoveRef.current) {
       await triggerMoveRef.current(inv, animationSpeed);
+    } else {
+      soundEffects.playTurn(inv.includes('2'), inv.includes('\''));
     }
-    setFacelets(prev => applyMoveToFacelets(prev, inv));
-    setCurrentStepIndex(prevIndex);
+
+    const prevState = applyMoveToFacelets(facelets, inv);
+    setFacelets(prevState);
 
     const currentStep = solutionSteps[prevIndex];
     setActiveMoveArrow(currentStep.move);
     setActiveFaceHighlight(currentStep.face as Face);
-  }, [solutionSteps, currentStepIndex, animationSpeed]);
+  }, [solutionSteps, currentStepIndex, facelets, animationSpeed]);
 
   // Jump to specific step
   const jumpToStep = useCallback((targetIndex: number) => {
     if (solutionSteps.length === 0 || !solutionInitialFacelets) return;
+    isAutoPlayingRef.current = false;
+    setIsPlayingSolution(false);
+
     const bounded = Math.max(0, Math.min(solutionSteps.length, targetIndex));
 
     let state = [...solutionInitialFacelets];
@@ -239,8 +284,9 @@ export function useCube() {
       state = applyMoveToFacelets(state, solutionSteps[i].move);
     }
 
-    setFacelets(state);
+    currentStepIndexRef.current = bounded;
     setCurrentStepIndex(bounded);
+    setFacelets(state);
 
     if (bounded < solutionSteps.length) {
       const s = solutionSteps[bounded];
@@ -249,14 +295,27 @@ export function useCube() {
     } else {
       setActiveMoveArrow(null);
       setActiveFaceHighlight(null);
+      if (isCubeSolved(state)) {
+        soundEffects.playSolvedFanfare();
+        confetti({
+          particleCount: 100,
+          spread: 80,
+          origin: { y: 0.6 },
+          colors: ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#ffffff'],
+        });
+      }
     }
   }, [solutionSteps, solutionInitialFacelets]);
 
   // Restart Solution
   const restartSolution = useCallback(() => {
+    isAutoPlayingRef.current = false;
+    setIsPlayingSolution(false);
+
     if (solutionInitialFacelets) {
       setFacelets([...solutionInitialFacelets]);
       setCurrentStepIndex(0);
+      currentStepIndexRef.current = 0;
       if (solutionSteps.length > 0) {
         setActiveMoveArrow(solutionSteps[0].move);
         setActiveFaceHighlight(solutionSteps[0].face as Face);
@@ -273,8 +332,82 @@ export function useCube() {
     }
   }, [solutionSteps, currentStepIndex, animationSpeed]);
 
+  // Toggle Auto-play Solution
+  const togglePlaySolution = useCallback(async () => {
+    if (isAutoPlayingRef.current) {
+      isAutoPlayingRef.current = false;
+      setIsPlayingSolution(false);
+      return;
+    }
+
+    if (solutionSteps.length === 0) return;
+
+    // If at the end, restart from beginning
+    if (currentStepIndexRef.current >= solutionSteps.length) {
+      restartSolution();
+      await new Promise(r => setTimeout(r, 200));
+    }
+
+    isAutoPlayingRef.current = true;
+    setIsPlayingSolution(true);
+
+    while (isAutoPlayingRef.current) {
+      const idx = currentStepIndexRef.current;
+      if (idx >= solutionStepsRef.current.length) {
+        isAutoPlayingRef.current = false;
+        setIsPlayingSolution(false);
+        break;
+      }
+
+      const step = solutionStepsRef.current[idx];
+      const nextIdx = idx + 1;
+
+      currentStepIndexRef.current = nextIdx;
+      setCurrentStepIndex(nextIdx);
+
+      // Animate move in 3D
+      if (triggerMoveRef.current) {
+        await triggerMoveRef.current(step.move, animationSpeedRef.current);
+      } else {
+        soundEffects.playTurn(step.move.includes('2'), step.move.includes('\''));
+      }
+
+      // Update facelets
+      setFacelets(prev => {
+        const updated = applyMoveToFacelets(prev, step.move);
+        return updated;
+      });
+
+      if (nextIdx < solutionStepsRef.current.length) {
+        const nextStep = solutionStepsRef.current[nextIdx];
+        setActiveMoveArrow(nextStep.move);
+        setActiveFaceHighlight(nextStep.face as Face);
+      } else {
+        setActiveMoveArrow(null);
+        setActiveFaceHighlight(null);
+        isAutoPlayingRef.current = false;
+        setIsPlayingSolution(false);
+        soundEffects.playSolvedFanfare();
+        confetti({
+          particleCount: 100,
+          spread: 80,
+          origin: { y: 0.6 },
+          colors: ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#ffffff'],
+        });
+        break;
+      }
+
+      // Pause between turns
+      const pauseDuration = Math.max(350, Math.round(700 / animationSpeedRef.current));
+      await new Promise(r => setTimeout(r, pauseDuration));
+    }
+  }, [solutionSteps, restartSolution]);
+
   // Apply Pattern
   const applyPattern = useCallback(async (pattern: CubePattern) => {
+    isAutoPlayingRef.current = false;
+    setIsPlayingSolution(false);
+
     const moves = parseMoves(pattern.moves);
     let current = [...SOLVED_FACELETS];
     for (const m of moves) {
@@ -287,26 +420,6 @@ export function useCube() {
     setCurrentStepIndex(0);
     soundEffects.playTurn(true, false);
   }, []);
-
-  // Auto-play solution timer
-  useEffect(() => {
-    if (isPlayingSolution) {
-      const intervalDelay = Math.max(600, Math.round(1100 / animationSpeed));
-      playIntervalRef.current = window.setInterval(() => {
-        if (currentStepIndex < solutionSteps.length) {
-          stepForward();
-        } else {
-          setIsPlayingSolution(false);
-        }
-      }, intervalDelay);
-    } else {
-      if (playIntervalRef.current) clearInterval(playIntervalRef.current);
-    }
-
-    return () => {
-      if (playIntervalRef.current) clearInterval(playIntervalRef.current);
-    };
-  }, [isPlayingSolution, currentStepIndex, solutionSteps.length, animationSpeed, stepForward]);
 
   return {
     facelets,
@@ -341,6 +454,7 @@ export function useCube() {
     jumpToStep,
     restartSolution,
     replayCurrentMove,
+    togglePlaySolution,
     applyPattern,
     setAnimationSpeed,
     setSoundEnabled,

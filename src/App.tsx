@@ -35,7 +35,7 @@ export function App() {
     onScramble: () => cube.scramble(20),
     onSpace: () => {
       if (mode === 'solver') {
-        cube.setIsPlayingSolution(!cube.isPlayingSolution);
+        cube.togglePlaySolution();
       }
     },
     onArrowLeft: () => {
@@ -194,7 +194,7 @@ export function App() {
                   currentStepIndex={cube.currentStepIndex}
                   isPlaying={cube.isPlayingSolution}
                   speed={cube.animationSpeed}
-                  onPlayPause={() => cube.setIsPlayingSolution(!cube.isPlayingSolution)}
+                  onPlayPause={cube.togglePlaySolution}
                   onNextStep={cube.stepForward}
                   onPrevStep={cube.stepBackward}
                   onJumpToStep={cube.jumpToStep}
@@ -202,7 +202,7 @@ export function App() {
                   onSkipToEnd={() => cube.jumpToStep(cube.solutionSteps.length)}
                   onReplayMove={cube.replayCurrentMove}
                   onChangeSpeed={cube.setAnimationSpeed}
-                  isSolved={cube.currentStepIndex >= cube.solutionSteps.length}
+                  isSolved={cube.isSolved && cube.currentStepIndex >= cube.solutionSteps.length}
                 />
               </div>
             )}
