@@ -1,12 +1,13 @@
 import React from 'react';
 import { AppMode } from '../types/cube';
-import { Box, PlaySquare, Scan, Layers, HelpCircle, Settings, Volume2, VolumeX, Sparkles } from 'lucide-react';
+import { Box, PlaySquare, Scan, Layers, HelpCircle, Settings, Volume2, VolumeX, Camera, Sparkles } from 'lucide-react';
 
 interface NavbarProps {
   mode: AppMode;
   onSelectMode: (mode: AppMode) => void;
   onOpenHelp: () => void;
   onOpenSettings: () => void;
+  onOpenScanner: () => void;
   soundEnabled: boolean;
   onToggleSound: () => void;
   hasActiveSolution: boolean;
@@ -17,6 +18,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   onSelectMode,
   onOpenHelp,
   onOpenSettings,
+  onOpenScanner,
   soundEnabled,
   onToggleSound,
   hasActiveSolution,
@@ -47,8 +49,15 @@ export const Navbar: React.FC<NavbarProps> = ({
             </div>
           </div>
 
-          {/* Quick Audio & Modal Actions on Mobile */}
+          {/* Quick Audio & Camera Actions on Mobile */}
           <div className="flex items-center gap-1 md:hidden">
+            <button
+              onClick={onOpenScanner}
+              className="p-2 rounded-xl text-blue-400 hover:text-white bg-blue-950/60 border border-blue-800"
+              title="Camera Cube Scanner"
+            >
+              <Camera className="w-4 h-4" />
+            </button>
             <button
               onClick={onToggleSound}
               className="p-2 rounded-xl text-slate-400 hover:text-white bg-slate-900 border border-slate-800"
@@ -77,7 +86,7 @@ export const Navbar: React.FC<NavbarProps> = ({
         <nav className="flex items-center gap-1 bg-slate-950/90 p-1 rounded-2xl border border-slate-800 shadow-inner max-w-full overflow-x-auto no-scrollbar">
           <button
             onClick={() => onSelectMode('virtual')}
-            className={`px-3.5 py-2 rounded-xl text-xs font-semibold transition-all flex items-center gap-1.5 shrink-0 ${
+            className={`px-3.5 py-2 rounded-xl text-xs font-semibold transition-all flex items-center gap-1.5 shrink-0 cursor-pointer ${
               mode === 'virtual'
                 ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md shadow-blue-600/30'
                 : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900'
@@ -89,7 +98,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 
           <button
             onClick={() => onSelectMode('input')}
-            className={`px-3.5 py-2 rounded-xl text-xs font-semibold transition-all flex items-center gap-1.5 shrink-0 ${
+            className={`px-3.5 py-2 rounded-xl text-xs font-semibold transition-all flex items-center gap-1.5 shrink-0 cursor-pointer ${
               mode === 'input'
                 ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-md shadow-emerald-600/30'
                 : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900'
@@ -103,7 +112,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           <button
             onClick={() => onSelectMode('solver')}
             disabled={!hasActiveSolution}
-            className={`px-3.5 py-2 rounded-xl text-xs font-semibold transition-all flex items-center gap-1.5 shrink-0 disabled:opacity-40 disabled:cursor-not-allowed ${
+            className={`px-3.5 py-2 rounded-xl text-xs font-semibold transition-all flex items-center gap-1.5 shrink-0 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer ${
               mode === 'solver'
                 ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md shadow-blue-600/30'
                 : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900'
@@ -115,7 +124,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 
           <button
             onClick={() => onSelectMode('patterns')}
-            className={`px-3.5 py-2 rounded-xl text-xs font-semibold transition-all flex items-center gap-1.5 shrink-0 ${
+            className={`px-3.5 py-2 rounded-xl text-xs font-semibold transition-all flex items-center gap-1.5 shrink-0 cursor-pointer ${
               mode === 'patterns'
                 ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md shadow-blue-600/30'
                 : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900'
@@ -129,8 +138,17 @@ export const Navbar: React.FC<NavbarProps> = ({
         {/* Right Desktop Actions */}
         <div className="hidden md:flex items-center gap-2">
           <button
+            onClick={onOpenScanner}
+            className="px-3 py-1.5 rounded-xl text-xs font-bold text-blue-300 bg-blue-950/60 hover:bg-blue-900/80 border border-blue-800/80 transition-all flex items-center gap-1.5 shadow-md shadow-blue-950/50 hover:scale-105 active:scale-95 cursor-pointer"
+            title="Scan physical cube with Camera / Webcam"
+          >
+            <Camera className="w-3.5 h-3.5 text-blue-400 animate-pulse" />
+            Camera Scan
+          </button>
+
+          <button
             onClick={onToggleSound}
-            className="p-2 rounded-xl text-slate-400 hover:text-white bg-slate-900/80 hover:bg-slate-800 border border-slate-800 transition-colors"
+            className="p-2 rounded-xl text-slate-400 hover:text-white bg-slate-900/80 hover:bg-slate-800 border border-slate-800 transition-colors cursor-pointer"
             title={soundEnabled ? 'Mute sound' : 'Unmute sound'}
           >
             {soundEnabled ? <Volume2 className="w-4 h-4 text-blue-400" /> : <VolumeX className="w-4 h-4" />}
@@ -138,7 +156,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 
           <button
             onClick={onOpenHelp}
-            className="p-2 rounded-xl text-slate-400 hover:text-white bg-slate-900/80 hover:bg-slate-800 border border-slate-800 transition-colors"
+            className="p-2 rounded-xl text-slate-400 hover:text-white bg-slate-900/80 hover:bg-slate-800 border border-slate-800 transition-colors cursor-pointer"
             title="Help & Notation"
           >
             <HelpCircle className="w-4 h-4" />
@@ -146,7 +164,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 
           <button
             onClick={onOpenSettings}
-            className="p-2 rounded-xl text-slate-400 hover:text-white bg-slate-900/80 hover:bg-slate-800 border border-slate-800 transition-colors"
+            className="p-2 rounded-xl text-slate-400 hover:text-white bg-slate-900/80 hover:bg-slate-800 border border-slate-800 transition-colors cursor-pointer"
             title="Settings"
           >
             <Settings className="w-4 h-4" />
