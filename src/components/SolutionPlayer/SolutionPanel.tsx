@@ -10,7 +10,6 @@ import {
   ChevronRight,
   RotateCcw,
   Gauge,
-  CheckCircle,
   Sparkles,
 } from 'lucide-react';
 
@@ -58,39 +57,19 @@ export const SolutionPanel: React.FC<SolutionPanelProps> = ({
     }
   }, [currentStepIndex]);
 
-  const currentStep = steps[currentStepIndex] || null;
+  const isAllCompleted = currentStepIndex >= steps.length;
+  const currentStep = !isAllCompleted ? (steps[currentStepIndex] || null) : null;
 
   return (
     <div className="flex flex-col gap-4">
-      {/* Solved Banner if finished */}
-      {isSolved && (
-        <div className="p-4 rounded-2xl bg-gradient-to-r from-emerald-950/80 via-teal-950/80 to-slate-900 border border-emerald-500/40 shadow-xl flex items-center justify-between animate-fade-in">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400">
-              <Sparkles className="w-6 h-6 animate-pulse" />
-            </div>
-            <div>
-              <h4 className="text-sm font-bold text-emerald-300">Cube Successfully Solved!</h4>
-              <p className="text-xs text-emerald-400/80">
-                Completed all {steps.length} moves in this solution.
-              </p>
-            </div>
-          </div>
-          <button
-            onClick={onRestart}
-            className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold transition-all shadow"
-          >
-            Replay Solution
-          </button>
-        </div>
-      )}
-
-      {/* Current Step Instruction Card */}
+      {/* Current Step Instruction Card or Solved Card */}
       <StepVisualizer
         step={currentStep}
         currentStepIndex={currentStepIndex}
         totalSteps={steps.length}
         onReplayMove={onReplayMove}
+        onRestart={onRestart}
+        isAllCompleted={isAllCompleted}
       />
 
       {/* Main Playback Control Bar */}
@@ -123,7 +102,7 @@ export const SolutionPanel: React.FC<SolutionPanelProps> = ({
         <div className="grid grid-cols-5 gap-2">
           <button
             onClick={onRestart}
-            className="p-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700/80 transition-all flex items-center justify-center shadow"
+            className="p-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700/80 transition-all flex items-center justify-center shadow active:scale-95 cursor-pointer"
             title="Restart Solution (⏮)"
           >
             <SkipBack className="w-4 h-4" />
@@ -132,28 +111,36 @@ export const SolutionPanel: React.FC<SolutionPanelProps> = ({
           <button
             onClick={onPrevStep}
             disabled={currentStepIndex <= 0}
-            className="p-3 rounded-xl bg-slate-800 hover:bg-slate-700 disabled:opacity-40 disabled:cursor-not-allowed text-slate-300 hover:text-white border border-slate-700/80 transition-all flex items-center justify-center shadow"
+            className="p-3 rounded-xl bg-slate-800 hover:bg-slate-700 disabled:opacity-40 disabled:cursor-not-allowed text-slate-300 hover:text-white border border-slate-700/80 transition-all flex items-center justify-center shadow active:scale-95 cursor-pointer"
             title="Previous Move (←)"
           >
             <ChevronLeft className="w-5 h-5" />
           </button>
 
           <button
-            onClick={onPlayPause}
-            className={`p-3 rounded-xl font-bold transition-all flex items-center justify-center shadow-lg ${
-              isPlaying
+            onClick={isAllCompleted ? onRestart : onPlayPause}
+            className={`p-3 rounded-xl font-bold transition-all flex items-center justify-center shadow-lg active:scale-95 cursor-pointer ${
+              isAllCompleted
+                ? 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-emerald-600/30'
+                : isPlaying
                 ? 'bg-amber-600 hover:bg-amber-500 text-white shadow-amber-600/30'
                 : 'bg-blue-600 hover:bg-blue-500 text-white shadow-blue-600/30'
             }`}
-            title="Play / Pause Auto-Advance (Space)"
+            title={isAllCompleted ? 'Restart' : isPlaying ? 'Pause' : 'Play'}
           >
-            {isPlaying ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5 ml-0.5" />}
+            {isAllCompleted ? (
+              <RotateCcw className="w-5 h-5" />
+            ) : isPlaying ? (
+              <Pause className="w-5 h-5" />
+            ) : (
+              <Play className="w-5 h-5 ml-0.5" />
+            )}
           </button>
 
           <button
             onClick={onNextStep}
-            disabled={currentStepIndex >= steps.length - 1}
-            className="p-3 rounded-xl bg-slate-800 hover:bg-slate-700 disabled:opacity-40 disabled:cursor-not-allowed text-slate-300 hover:text-white border border-slate-700/80 transition-all flex items-center justify-center shadow"
+            disabled={isAllCompleted}
+            className="p-3 rounded-xl bg-slate-800 hover:bg-slate-700 disabled:opacity-40 disabled:cursor-not-allowed text-slate-300 hover:text-white border border-slate-700/80 transition-all flex items-center justify-center shadow active:scale-95 cursor-pointer"
             title="Next Move (→)"
           >
             <ChevronRight className="w-5 h-5" />
@@ -161,7 +148,8 @@ export const SolutionPanel: React.FC<SolutionPanelProps> = ({
 
           <button
             onClick={onSkipToEnd}
-            className="p-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700/80 transition-all flex items-center justify-center shadow"
+            disabled={isAllCompleted}
+            className="p-3 rounded-xl bg-slate-800 hover:bg-slate-700 disabled:opacity-40 disabled:cursor-not-allowed text-slate-300 hover:text-white border border-slate-700/80 transition-all flex items-center justify-center shadow active:scale-95 cursor-pointer"
             title="Skip to End (⏭)"
           >
             <SkipForward className="w-4 h-4" />
@@ -190,11 +178,11 @@ export const SolutionPanel: React.FC<SolutionPanelProps> = ({
               <button
                 key={idx}
                 onClick={() => onJumpToStep(idx)}
-                className={`shrink-0 px-2.5 py-1.5 rounded-lg text-xs font-mono font-bold transition-all border ${
+                className={`shrink-0 px-2.5 py-1.5 rounded-lg text-xs font-mono font-bold transition-all border cursor-pointer ${
                   isActive
                     ? 'bg-blue-600 text-white border-blue-400 shadow-lg shadow-blue-500/30 scale-105 ring-2 ring-blue-400/40'
                     : isPassed
-                    ? 'bg-slate-800/80 text-slate-400 border-slate-700/50 hover:text-slate-200'
+                    ? 'bg-emerald-950/60 text-emerald-300 border-emerald-800/60 hover:text-white'
                     : 'bg-slate-950 text-slate-500 border-slate-800 hover:text-slate-300 hover:border-slate-700'
                 }`}
               >

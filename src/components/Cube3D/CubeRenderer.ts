@@ -205,6 +205,7 @@ export class CubeRenderer {
    * Sync visual stickers directly from a 54-facelet array
    */
   public updateStickersFromFacelets(facelets: FaceletArray) {
+    this.resetVisualTransforms();
     this.stickers.forEach(s => {
       const color = facelets[s.faceletIndex] || 'white';
       const mat = s.mesh.material as THREE.MeshStandardMaterial;

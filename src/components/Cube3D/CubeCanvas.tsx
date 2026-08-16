@@ -333,22 +333,9 @@ export const CubeCanvas: React.FC<CubeCanvasProps> = ({
 
     const hit = getIntersectedSticker(e);
 
-    if (hit) {
-      if (isPaintingMode) {
-        // Painting directly on 3D cube
-        onFaceletClicked?.(hit.faceletIndex);
-        return;
-      }
-      startStickerRef.current = {
-        faceletIndex: hit.faceletIndex,
-        face: hit.face,
-        screenX: clientX,
-        screenY: clientY,
-      };
-      isStickerDragRef.current = true;
-    } else {
-      startStickerRef.current = null;
-      isStickerDragRef.current = false;
+    if (hit && isPaintingMode) {
+      // Painting directly on 3D cube
+      onFaceletClicked?.(hit.faceletIndex);
     }
   };
 
@@ -362,40 +349,15 @@ export const CubeCanvas: React.FC<CubeCanvasProps> = ({
 
     lastMousePosRef.current = { x: clientX, y: clientY };
 
-    // If starting from a sticker in play mode, check if gesture turn triggered
-    if (isStickerDragRef.current && startStickerRef.current && !isPaintingMode) {
-      const totalDeltaX = clientX - startStickerRef.current.screenX;
-      const totalDeltaY = clientY - startStickerRef.current.screenY;
-
-      if (Math.abs(totalDeltaX) > 28 || Math.abs(totalDeltaY) > 28) {
-        const move = calculateGestureTurn(startStickerRef.current.face, totalDeltaX, totalDeltaY);
-        if (move) {
-          isStickerDragRef.current = false;
-          startStickerRef.current = null;
-          queueMove(move, animationSpeed).then(() => {
-            onMoveExecuted?.(move);
-          });
-          return;
-        }
-      }
-      return;
-    }
-
-    // Free Orbit Controls
-    const rotSpeed = 0.0065;
+    // Smooth Orbit Controls to freely inspect all sides of the 3D cube
+    const rotSpeed = 0.007;
     cameraThetaRef.current -= deltaX * rotSpeed;
     cameraPhiRef.current -= deltaY * rotSpeed;
     updateCameraTransform();
   };
 
-  const handlePointerUp = (e: React.MouseEvent | React.TouchEvent) => {
-    if (startStickerRef.current && isStickerDragRef.current && !isPaintingMode) {
-      // It was a simple click on a sticker
-      onFaceletClicked?.(startStickerRef.current.faceletIndex);
-    }
+  const handlePointerUp = () => {
     isDraggingRef.current = false;
-    isStickerDragRef.current = false;
-    startStickerRef.current = null;
   };
 
   const handleWheel = (e: React.WheelEvent) => {

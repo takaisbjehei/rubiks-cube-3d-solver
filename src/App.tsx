@@ -202,7 +202,7 @@ export function App() {
                   onSkipToEnd={() => cube.jumpToStep(cube.solutionSteps.length)}
                   onReplayMove={cube.replayCurrentMove}
                   onChangeSpeed={cube.setAnimationSpeed}
-                  isSolved={cube.currentStepIndex >= cube.solutionSteps.length || cube.isSolved}
+                  isSolved={cube.currentStepIndex >= cube.solutionSteps.length}
                 />
               </div>
             )}

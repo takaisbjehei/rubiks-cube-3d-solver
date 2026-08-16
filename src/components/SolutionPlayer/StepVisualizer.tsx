@@ -1,12 +1,14 @@
 import React from 'react';
 import { SolutionStep, NotationMove } from '../../types/cube';
-import { RotateCw, RotateCcw, RefreshCw, Compass } from 'lucide-react';
+import { RotateCw, RotateCcw, RefreshCw, Compass, Sparkles, CheckCircle2 } from 'lucide-react';
 
 interface StepVisualizerProps {
   step: SolutionStep | null;
   currentStepIndex: number;
   totalSteps: number;
   onReplayMove?: () => void;
+  onRestart?: () => void;
+  isAllCompleted?: boolean;
 }
 
 export const StepVisualizer: React.FC<StepVisualizerProps> = ({
@@ -14,11 +16,30 @@ export const StepVisualizer: React.FC<StepVisualizerProps> = ({
   currentStepIndex,
   totalSteps,
   onReplayMove,
+  onRestart,
+  isAllCompleted = false,
 }) => {
-  if (!step) {
+  if (isAllCompleted || !step || currentStepIndex >= totalSteps) {
     return (
-      <div className="flex flex-col items-center justify-center p-6 rounded-2xl bg-slate-900/80 border border-slate-800 text-center">
-        <p className="text-sm text-slate-400">No active step. Select or generate a solution to start.</p>
+      <div className="flex flex-col items-center justify-center p-6 rounded-2xl bg-gradient-to-b from-emerald-950/80 via-slate-900 to-slate-950 border border-emerald-500/40 shadow-2xl text-center gap-3">
+        <div className="w-14 h-14 rounded-2xl bg-emerald-500/20 border border-emerald-400/40 flex items-center justify-center text-emerald-400 shadow-lg shadow-emerald-500/20">
+          <Sparkles className="w-8 h-8 animate-pulse" />
+        </div>
+        <div>
+          <h3 className="text-lg font-black text-white">Cube is 100% Solved!</h3>
+          <p className="text-xs text-emerald-400/90 mt-1">
+            All {totalSteps} solution steps have been performed.
+          </p>
+        </div>
+        {onRestart && (
+          <button
+            onClick={onRestart}
+            className="mt-2 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition-all shadow-lg shadow-emerald-600/30 flex items-center gap-1.5 active:scale-95 cursor-pointer"
+          >
+            <RefreshCw className="w-3.5 h-3.5" />
+            Replay Solution
+          </button>
+        )}
       </div>
     );
   }
@@ -30,13 +51,18 @@ export const StepVisualizer: React.FC<StepVisualizerProps> = ({
     <div className="flex flex-col gap-4 p-5 rounded-2xl bg-gradient-to-b from-slate-900 via-slate-900/95 to-slate-950 border border-slate-800 shadow-2xl">
       {/* Top Step Counter & Progress */}
       <div className="flex items-center justify-between">
-        <span className="text-xs font-mono font-bold uppercase tracking-wider text-blue-400">
-          Step {currentStepIndex + 1} of {totalSteps}
-        </span>
-        <div className="w-36 h-2 bg-slate-800 rounded-full overflow-hidden border border-slate-700/50">
+        <div className="flex items-center gap-2">
+          <span className="text-xs font-mono font-bold uppercase tracking-wider text-blue-400">
+            Step {currentStepIndex + 1} of {totalSteps}
+          </span>
+          <span className="text-[10px] px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-300 border border-blue-500/30">
+            Next Move
+          </span>
+        </div>
+        <div className="w-32 h-2 bg-slate-800 rounded-full overflow-hidden border border-slate-700/50">
           <div
             className="h-full bg-gradient-to-r from-blue-500 to-indigo-500 transition-all duration-300 rounded-full"
-            style={{ width: `${((currentStepIndex + 1) / totalSteps) * 100}%` }}
+            style={{ width: `${((currentStepIndex) / totalSteps) * 100}%` }}
           />
         </div>
       </div>
